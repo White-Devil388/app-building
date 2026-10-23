@@ -23,9 +23,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
+      - name: Setup Android Project & Dependencies
         run: |
           cd flutter_app
+          flutter create . --org com.drivelux --platforms android
           flutter pub get
 
       - name: Build Release APK
