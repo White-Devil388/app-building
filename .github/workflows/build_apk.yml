@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,21 +31,33 @@ jobs:
           cd flutter_app
           rm -rf android
           flutter create . --org com.drivelux --project-name drivelux_app --platforms android
-          # Ensure minSdkVersion 21 and multiDexEnabled for video_player / ExoPlayer
-          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle 2>/dev/null || true
-          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle 2>/dev/null || true
-          sed -i 's/defaultConfig {/defaultConfig {\n        multiDexEnabled true/g' android/app/build.gradle 2>/dev/null || true
+          
+          # Patch minSdk to 21 for video_player in both Groovy and Kotlin DSL
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle
+            sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
+            sed -i 's/defaultConfig {/defaultConfig {\n        multiDexEnabled true/g' android/app/build.gradle || true
+            echo "Patched Groovy android/app/build.gradle"
+          fi
+          
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle.kts
+            sed -i 's/minSdk = [0-9]*/minSdk = 21/g' android/app/build.gradle.kts
+            sed -i 's/defaultConfig {/defaultConfig {\n        multiDexEnabled = true/g' android/app/build.gradle.kts || true
+            echo "Patched Kotlin android/app/build.gradle.kts"
+          fi
+          
+          echo "flutter.minSdkVersion=21" >> android/local.properties
+          
+          echo "=== APP GRADLE FILE PREVIEW ==="
+          cat android/app/build.gradle 2>/dev/null || cat android/app/build.gradle.kts 2>/dev/null
+          
           flutter pub get
 
       - name: Build Android APK
         run: |
           cd flutter_app
-          flutter build apk --debug --no-tree-shake-icons -v > ../build.log 2>&1 || {
-            echo "=== BUILD LOG ERROR SNIPPET ==="
-            grep -E "FAILURE|Error|Exception|failed" ../build.log | head -n 30 || true
-            tail -n 80 ../build.log
-            exit 1
-          }
+          flutter build apk --debug --no-tree-shake-icons
 
       - name: Upload APK Artifact
         if: success()
@@ -51,9 +66,16 @@ jobs:
           name: DriveLux-Android-APK
           path: flutter_app/build/app/outputs/flutter-apk/*.apk
 
-      - name: Upload Build Log
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release with APK
+        if: success()
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
         with:
-          name: Build-Execution-Log
-          path: build.log
+          tag_name: "v1.0.0-${{ github.run_number }}"
+          name: "DriveLux Android App v1.0.${{ github.run_number }}"
+          body: |
+            ## DriveLux - Luxury Car Rental & Hosting (Standalone Offline Android App)
+            
+            Download the APK directly to your Android device to install and use.
+          files: flutter_app/build/app/outputs/flutter-apk/*.apk
+
