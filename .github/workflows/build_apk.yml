@@ -28,18 +28,32 @@ jobs:
           cd flutter_app
           rm -rf android
           flutter create . --org com.drivelux --project-name drivelux_app --platforms android
-          # Ensure minSdkVersion is at least 21 for video_player compatibility
+          # Ensure minSdkVersion 21 and multiDexEnabled for video_player / ExoPlayer
           sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle 2>/dev/null || true
           sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/defaultConfig {/defaultConfig {\n        multiDexEnabled true/g' android/app/build.gradle 2>/dev/null || true
           flutter pub get
 
       - name: Build Android APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug --no-tree-shake-icons
+          flutter build apk --debug --no-tree-shake-icons -v > ../build.log 2>&1 || {
+            echo "=== BUILD LOG ERROR SNIPPET ==="
+            grep -E "FAILURE|Error|Exception|failed" ../build.log | head -n 30 || true
+            tail -n 80 ../build.log
+            exit 1
+          }
 
       - name: Upload APK Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: DriveLux-Android-APK
           path: flutter_app/build/app/outputs/flutter-apk/*.apk
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Execution-Log
+          path: build.log
