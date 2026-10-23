@@ -36,14 +36,12 @@ jobs:
           if [ -f android/app/build.gradle ]; then
             sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle
             sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
-            sed -i 's/defaultConfig {/defaultConfig {\n        multiDexEnabled true/g' android/app/build.gradle || true
             echo "Patched Groovy android/app/build.gradle"
           fi
           
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle.kts
             sed -i 's/minSdk = [0-9]*/minSdk = 21/g' android/app/build.gradle.kts
-            sed -i 's/defaultConfig {/defaultConfig {\n        multiDexEnabled = true/g' android/app/build.gradle.kts || true
             echo "Patched Kotlin android/app/build.gradle.kts"
           fi
           
@@ -55,9 +53,27 @@ jobs:
           flutter pub get
 
       - name: Build Android APK
+        id: build_apk
+        continue-on-error: true
         run: |
           cd flutter_app
-          flutter build apk --debug --no-tree-shake-icons
+          flutter build apk --debug --no-tree-shake-icons -v > ../build.log 2>&1
+
+      - name: Push Build Log to Git for Inspection
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B ci-debug-log
+          git add build.log
+          git commit -m "ci: verbose build log from run ${{ github.run_number }}" || true
+          git push -f origin ci-debug-log
+
+      - name: Verify Build Outcome
+        if: steps.build_apk.outcome != 'success'
+        run: |
+          echo "Build failed. View the full log in the ci-debug-log branch."
+          exit 1
 
       - name: Upload APK Artifact
         if: success()
@@ -78,4 +94,5 @@ jobs:
             
             Download the APK directly to your Android device to install and use.
           files: flutter_app/build/app/outputs/flutter-apk/*.apk
+
 
