@@ -1,0 +1,18 @@
+# Flutter & Dart Build Artifacts
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/local.properties
+
+# Logs
+logs
+*.log
+
+# Editor & OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
