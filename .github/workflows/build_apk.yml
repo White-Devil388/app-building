@@ -32,7 +32,7 @@ jobs:
       - name: Build Release APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons -v > build.log 2>&1 || { tail -n 120 build.log; exit 1; }
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
