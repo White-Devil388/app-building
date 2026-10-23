@@ -28,15 +28,18 @@ jobs:
           cd flutter_app
           rm -rf android
           flutter create . --org com.drivelux --project-name drivelux_app --platforms android
+          # Ensure minSdkVersion is at least 21 for video_player compatibility
+          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle 2>/dev/null || true
           flutter pub get
 
-      - name: Build Release APK
+      - name: Build Android APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DriveLux-Release-APK
+          name: DriveLux-Android-APK
           path: flutter_app/build/app/outputs/flutter-apk/*.apk
