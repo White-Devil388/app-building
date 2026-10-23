@@ -23,16 +23,17 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Setup Android Project & Dependencies
+      - name: Setup Official Android Scaffolding & Dependencies
         run: |
           cd flutter_app
-          flutter create . --org com.drivelux --platforms android
+          rm -rf android
+          flutter create . --org com.drivelux --project-name drivelux_app --platforms android
           flutter pub get
 
       - name: Build Release APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-tree-shake-icons -v > build.log 2>&1 || { tail -n 120 build.log; exit 1; }
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
